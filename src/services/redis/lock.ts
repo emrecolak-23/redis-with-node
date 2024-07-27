@@ -1,9 +1,10 @@
 import { randomBytes } from 'crypto';
 import { client } from './client';
 
-export const withLock = async (key: string, cb: () => any) => {
+export const withLock = async (key: string, cb: (redisClient: Client, signal: any) => any) => {
 	const retryDelayMs = 100;
 	let retries = 20;
+	const timeoutMs = 2000;
 
 	const token = randomBytes(6).toString('hex');
 	const lockKey = `lock:${key}`;
@@ -21,7 +22,12 @@ export const withLock = async (key: string, cb: () => any) => {
 		}
 
 		try {
-			const result = await cb();
+			const signal = { expired: false };
+			setTimeout(() => {
+				signal.expired = true;
+			}, timeoutMs);
+			const proxiedClient = buildClientProxy(timeoutMs);
+			const result = await cb(proxiedClient, signal);
 			return result;
 		} finally {
 			await client.unlock(lockKey, token);
@@ -29,7 +35,23 @@ export const withLock = async (key: string, cb: () => any) => {
 	}
 };
 
-const buildClientProxy = () => {};
+type Client = typeof client;
+
+const buildClientProxy = (timeourMs: number) => {
+	const startTime = Date.now();
+	const handler: any = {
+		get(target: ClientQueryOptions, prop: keyof Client) {
+			if (Date.now() >= startTime + timeourMs) {
+				throw new Error('Lock has expired');
+			}
+
+			const value = target[prop];
+			return typeof value === 'function' ? value.bind(target) : value;
+		}
+	};
+
+	return new Proxy(client, handler) as Client;
+};
 
 const pause = (duration: number) => {
 	return new Promise((resolve) => {
