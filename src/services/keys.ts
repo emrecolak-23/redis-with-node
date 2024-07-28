@@ -49,3 +49,7 @@ export const itemsByPriceKey = () => {
 export const bidsHistoryCacheKey = (itemId: string) => {
 	return `history#${itemId}`;
 };
+
+export const itemsIndexKey = () => {
+	return `idx:items`;
+};
