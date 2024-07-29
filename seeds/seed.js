@@ -53,49 +53,22 @@ const run = async () => {
 		};
 
 		return [
-			..._item.likes.map((userId) => {
-				return client.sAdd(usersLikesKey(userId), _item.id);
-			}),
-			..._item.views.map((userId) => {
-				return client.pfAdd(itemsViewsKey(_item.id), userId);
-			}),
+			..._item.likes.map((userId) => client.sAdd(usersLikesKey(userId), item.id)),
+			..._item.views.map((userId) => client.pfAdd(itemsViewsKey(item.id), userId)),
 			client.hSet(itemsKey(item.id), item),
-			client.zAdd(usersItemsKey(item.ownerId), {
-				value: item.id,
-				score: endingAt
-			}),
-			client.zAdd(itemsByBidsKey(), {
-				value: item.id,
-				score: item.bids
-			}),
-			client.zAdd(itemsByViewsKey(), {
-				value: item.id,
-				score: item.views
-			}),
-			client.zAdd(itemsByPriceKey(), {
-				value: item.id,
-				score: item.price
-			}),
-			client.zAdd(itemsByEndingAtKey(), {
-				value: item.id,
-				score: item.endingAt
-			})
+			client.zAdd(usersItemsKey(item.ownerId), { value: item.id, score: endingAt }),
+			client.zAdd(itemsByBidsKey(), { value: item.id, score: item.bids }),
+			client.zAdd(itemsByViewsKey(), { value: item.id, score: item.views }),
+			client.zAdd(itemsByPriceKey(), { value: item.id, score: item.price }),
+			client.zAdd(itemsByEndingAtKey(), { value: item.id, score: item.endingAt })
 		];
 	});
 
 	const userPromises = _.flatMap(content.users, (user) => {
 		return [
-			client.sAdd(usernamesUniqueKey(), {
-				value: user.username
-			}),
-			client.zAdd(usernamesKey(), {
-				value: user.username,
-				score: parseInt(user.id, 16)
-			}),
-			client.hSet(usersKey(user.id), {
-				username: user.username,
-				password: ''
-			})
+			client.sAdd(usernamesUniqueKey(), user.username),
+			client.zAdd(usernamesKey(), { value: user.username, score: parseInt(user.id, 16) }),
+			client.hSet(usersKey(user.id), { username: user.username, password: '' })
 		];
 	});
 
